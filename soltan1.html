@@ -46,13 +46,11 @@
 <div id="loadingOverlay" class="full-screen"><div class="loader-circle"></div></div>
 <div id="globalOverlay" class="black-overlay" onclick="closeAllModals()"></div>
 
-<!-- مودال عرض الصورة مكبرة -->
 <div id="imageModal" class="modal" onclick="closeAllModals()">
     <img id="fullImage">
     <p style="color: white; margin-top: 10px;">إضغط في أي مكان للإغلاق</p>
 </div>
 
-<!-- شاشة التقييم -->
 <div id="feedbackScreen" class="feedback-screen">
     <h2 style="color:var(--main)">شكراً لزيارتكم! ✨</h2>
     <p style="color: #ccc;">رأيك يهمنا، سيتم توجيهك إلى صفحة التقييم حالاً</p>
@@ -64,7 +62,6 @@
     <p id="redirectMsg" class="success-msg">جاري التوجيه خلال 3 ثوانٍ...</p>
 </div>
 
-<!-- شاشة الترحيب -->
 <div id="welcomeScreen" class="full-screen" style="display:none;">
     <h1 style="color: var(--main); font-size: 40px;">Sweet & Salt</h1>
     <p>مرحباً بكم في الطاولة رقم 2</p>
@@ -72,14 +69,12 @@
     <p id="lockMsg" style="color:var(--red); display:none; margin-top:20px;">⚠️ الطاولة مشغولة حالياً</p>
 </div>
 
-<!-- شاشة الانتظار -->
 <div id="waitScreen" class="full-screen" style="display:none;">
     <div class="loader-circle"></div>
     <h2 style="color:var(--main); margin-top:20px;">بانتظار موافقة النادل...</h2>
     <p>طاولة رقم 2</p>
 </div>
 
-<!-- المحتوى الرئيسي -->
 <div id="mainContent" style="display:none;">
     <div class="header"><h3>Sweet & Salt | T2</h3></div>
     <div class="category-bar">
@@ -96,7 +91,6 @@
     </button>
 </div>
 
-<!-- مودال التفاصيل -->
 <div id="detailModal" class="modal">
     <video id="itemVideo" style="width:100%; height:200px; object-fit:cover;" controls autoplay muted loop playsinline></video>
     <div style="padding:20px;">
@@ -107,7 +101,6 @@
     </div>
 </div>
 
-<!-- مودال السلة -->
 <div id="cartModal" class="modal">
     <div style="padding: 20px; background: var(--main); color: #000; text-align: center; font-weight: bold;">طلب طاولة رقم 2</div>
     <div id="cartItemsList" style="max-height: 40vh; overflow-y: auto; padding: 10px;"></div>
@@ -142,12 +135,10 @@ function initSystem() {
             return;
         }
 
-        // منطق الخروج والتقييم
         if (isAuthorized && data.isBusy === false) {
             handleExit(); return;
         }
 
-        // منطق الدخول
         if(!isAuthorized && data.status === "active" && data.current_device === MY_TOKEN) {
             isAuthorized = true;
             document.getElementById('welcomeScreen').style.display = 'none';
@@ -173,10 +164,17 @@ async function requestSession() {
     }, { merge: true });
 }
 
+// دالة جلب الأطباق المصححة للفيديو والترتيب
 async function fetchDishes(cat) {
     const grid = document.getElementById('grid');
     grid.innerHTML = "<p style='text-align:center;'>...</p>";
-    const snap = await db.collection("dishes").where("category", "==", cat).get();
+    
+    // الترتيب حسب orderNum لضمان ظهور الأطباق كما في تطبيق الإدارة
+    const snap = await db.collection("dishes")
+        .where("category", "==", cat)
+        .orderBy("orderNum", "asc")
+        .get();
+        
     grid.innerHTML = "";
     snap.forEach(doc => {
         const d = doc.data();
@@ -185,7 +183,7 @@ async function fetchDishes(cat) {
                 <div class="img-wrapper" onclick="zoomImage('${d.img || 'foto.jpg'}')">
                     <img src="${d.img || 'foto.jpg'}" onerror="this.src='https://via.placeholder.com/150'">
                 </div>
-                <div class="info-panel" onclick="openDetails('${d.name}', ${d.price}, '${d.video || ''}', '${d.ingredients || ''}')">
+                <div class="info-panel" onclick="openDetails('${d.name}', ${d.price}, '${d.videoUrl || ''}', '${d.ingredients || ''}')">
                     <h4>${d.name}</h4>
                     <div style="color:var(--main); font-weight:bold;">${d.price} دج</div>
                 </div>
@@ -199,11 +197,22 @@ function zoomImage(src) {
     document.getElementById('globalOverlay').style.display = 'block';
 }
 
-function openDetails(name, price, video, ing) {
+// دالة تفاصيل الطبق المصححة لتشغيل فيديو Cloudinary
+function openDetails(name, price, videoUrl, ing) {
     document.getElementById('itemName').innerText = name;
     document.getElementById('itemIngredients').innerText = "🌿 " + (ing || "مكونات طازجة");
+    
     const v = document.getElementById('itemVideo');
-    v.src = video; v.play().catch(() => {});
+    if (videoUrl && videoUrl.trim() !== "") {
+        v.style.display = "block";
+        v.src = videoUrl;
+        v.load();
+        v.play().catch(() => {});
+    } else {
+        v.style.display = "none";
+        v.src = "";
+    }
+    
     document.getElementById('addBtnDetail').onclick = () => { addToCart(name, price); closeAllModals(); };
     document.getElementById('globalOverlay').style.display = 'block';
     document.getElementById('detailModal').style.display = 'flex';
@@ -247,7 +256,6 @@ function changeQty(index, delta) {
     if(cart.length === 0) closeAllModals(); else openCart();
 }
 
-// وظيفة الإرسال المتوافقة مع طاولة 2
 async function sendOrder() {
     const btn = document.getElementById('sendOrderBtn');
     btn.disabled = true; btn.innerText = "جاري الإرسال...";
