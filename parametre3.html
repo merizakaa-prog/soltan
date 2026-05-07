@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Berberous Control | المنيو المنظم</title>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+
+    <style>
+        :root { --primary: #8b0000; --secondary: #27ae60; --blue: #2980b9; --dark: #1a0f05; --gold: #d4a373; --bg: #f4f7f6; }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: var(--bg); margin: 0; padding: 0; direction: rtl; color: var(--dark); overflow-x: hidden; }
+        
+        .admin-header { text-align: center; padding: 15px; background: white; box-shadow: 0 4px 10px rgba(0,0,0,0.05); position: sticky; top: 0; z-index: 1000; }
+        .tabs { display: flex; justify-content: center; gap: 10px; margin-top: 10px; }
+        .tab-btn { padding: 8px 18px; border: none; border-radius: 20px; background: #eee; cursor: pointer; font-weight: bold; font-size: 14px; }
+        .tab-btn.active { background: var(--primary); color: white; }
+        
+        .section { display: none; padding: 10px; max-width: 500px; margin: 0 auto; }
+        .section.active { display: block; }
+
+        /* شريط التقدم */
+        .progress-container { display: none; margin: 10px 0; background: #eee; border-radius: 10px; height: 18px; overflow: hidden; position: relative; }
+        .progress-bar { height: 100%; background: var(--secondary); width: 0%; transition: width 0.3s; }
+        .progress-text { position: absolute; width: 100%; text-align: center; font-size: 11px; line-height: 18px; color: #000; font-weight: bold; }
+
+        /* عناوين الأصناف */
+        .category-header { background: #eee; color: #555; padding: 5px 15px; margin: 15px 0 8px; border-radius: 5px; font-weight: bold; font-size: 12px; border-right: 4px solid var(--gold); }
+
+        /* منطقة الترتيب - مساحة جانبية */
+        #sortableContainer { padding-bottom: 100px; display: flex; flex-direction: column; align-items: center; }
+        .item-card { 
+            display: flex; align-items: center; background: white; padding: 10px; margin-bottom: 6px; 
+            border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.08); 
+            width: 85%; box-sizing: border-box;
+        }
+        .item-card img { width: 35px; height: 35px; border-radius: 8px; object-fit: cover; margin-left: 12px; }
+        .info { flex: 1; font-size: 14px; font-weight: 600; }
+        .handle { color: #ccc; padding: 10px; cursor: grab; }
+
+        /* مودال التعديل */
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 2000; padding: 15px; overflow-y: auto; }
+        .modal-content { background: white; border-radius: 25px; padding: 20px; max-width: 450px; margin: 20px auto; position: relative; }
+        
+        input, textarea, select { width: 100%; padding: 12px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 12px; box-sizing: border-box; }
+        .save-btn { width: 100%; padding: 15px; background: var(--secondary); color: white; border: none; border-radius: 15px; font-weight: bold; cursor: pointer; }
+        
+        .dashboard-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px; }
+        .action-card { background: white; padding: 25px; border-radius: 20px; text-align: center; box-shadow: 0 4px 8px rgba(0,0,0,0.06); cursor: pointer; }
+        #floatingSaveOrder { position: fixed; bottom: 20px; left: 5%; width: 90%; background: var(--primary); color: white; padding: 16px; border-radius: 50px; border: none; font-weight: bold; display: none; z-index: 3000; }
+    </style>
+</head>
+<body>
+
+    <div class="admin-header">
+        <h2 style="margin:0; font-size: 18px;">Berberous Control</h2>
+        <div class="tabs">
+            <button class="tab-btn active" onclick="showSection('add', this)">الرئيسية</button>
+            <button class="tab-btn" onclick="showSection('order', this); loadSortableItems()">الترتيب</button>
+        </div>
+    </div>
+
+    <div id="section-add" class="section active">
+        <div class="dashboard-grid">
+            <div class="action-card" onclick="openAddForm()">
+                <i class="fa fa-plus-circle" style="color: var(--secondary); font-size: 35px;"></i>
+                <p>إضافة طبق</p>
+            </div>
+            <div class="action-card" onclick="openModal('manageModal'); loadManageList()">
+                <i class="fa fa-tasks" style="color: var(--blue); font-size: 35px;"></i>
+                <p>تعديل المنيو</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="section-order" class="section">
+        <p style="text-align: center; color: #888; font-size: 11px;">اسحب من الأيقونة للترتيب ✍️</p>
+        <div id="sortableContainer"></div>
+        <button id="floatingSaveOrder" onclick="saveNewOrder()">حفظ الترتيب ✅</button>
+    </div>
+
+    <div id="addModal" class="modal">
+        <div class="modal-content">
+            <h2 id="modalTitle">إضافة طبق جديد</h2>
+            <select id="pCat">
+                <option value="Pizza">Pizza</option>
+                <option value="Snacks">Snacks</option>
+                <option value="Plats">Plats</option>
+                <option value="Sweets">Sweets</option> 
+                <option value="Boisson">Boisson</option>
+            </select>
+            <input type="text" id="pName" placeholder="اسم الطبق">
+            <input type="number" id="pPrice" placeholder="السعر">
+            <textarea id="pIng" placeholder="المكونات..."></textarea>
+            
+            <input type="file" id="fileI" hidden accept="image/*">
+            <input type="file" id="fileV" hidden accept="video/*">
+            <div style="display: flex; gap: 10px; margin-bottom: 12px;">
+                <button onclick="document.getElementById('fileI').click()" style="flex:1; padding:10px; border-radius:10px; border:1px solid #ddd; background:#fff;"><i class="fa fa-image"></i> صورة</button>
+                <button onclick="document.getElementById('fileV').click()" style="flex:1; padding:10px; border-radius:10px; border:1px solid #ddd; background:#fff;"><i class="fa fa-video"></i> فيديو</button>
+            </div>
+
+            <div class="progress-container" id="progCont">
+                <div class="progress-bar" id="progBar"></div>
+                <div class="progress-text" id="progText">0%</div>
+            </div>
+
+            <button class="save-btn" id="mainBtn" onclick="saveProduct()">حفظ ✅</button>
+            <button onclick="closeModal('addModal')" style="width:100%; background:none; border:none; color:red; margin-top:15px;">إلغاء</button>
+        </div>
+    </div>
+
+    <div id="manageModal" class="modal">
+        <div class="modal-content" style="max-width: 500px;">
+            <h3 style="margin: 0 0 15px 0;">تعديل المنيو (حسب الصنف)</h3>
+            <div id="manageListBody" style="max-height: 500px; overflow-y: auto; padding-left: 5px;">
+                </div>
+            <button onclick="closeModal('manageModal')" style="width:100%; padding:12px; background:#eee; border:none; border-radius:12px; margin-top:15px; font-weight:bold;">إغلاق</button>
+        </div>
+    </div>
+
+<script>
+    const firebaseConfig = { projectId: "soltan-95348" };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    const CLOUD_NAME = "dzrrirfig";
+    const UPLOAD_PRESET = "ml_default"; 
+    const categories = ["Pizza", "Snacks", "Plats", "Sweets", "Boisson"];
+    let currentEditId = null;
+
+    function showSection(id, btn) {
+        document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+        document.getElementById('section-' + id).classList.add('active');
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+    }
+
+    // الرفع مع التقدم المئوي
+    function uploadMediaWithProgress(file) {
+        return new Promise((resolve, reject) => {
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('upload_preset', UPLOAD_PRESET);
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/auto/upload`, true);
+            xhr.upload.onprogress = (e) => {
+                if (e.lengthComputable) {
+                    const percent = Math.round((e.loaded / e.total) * 100);
+                    document.getElementById('progBar').style.width = percent + '%';
+                    document.getElementById('progText').innerText = percent + '%';
+                }
+            };
+            xhr.onload = () => {
+                if (xhr.status === 200) resolve(JSON.parse(xhr.responseText).secure_url);
+                else reject('Error');
+            };
+            xhr.send(formData);
+        });
+    }
+
+    // --- دالة تعديل المنيو: تعرض الأطباق مقسمة حسب الصنف للمساعدة ---
+    function loadManageList() {
+        const body = document.getElementById('manageListBody');
+        body.innerHTML = "<p style='text-align:center'>جاري التحميل...</p>";
+        
+        db.collection("dishes").orderBy("orderNum", "asc").onSnapshot(snap => {
+            body.innerHTML = "";
+            let allDishes = [];
+            snap.forEach(doc => allDishes.push({id: doc.id, ...doc.data()}));
+
+            categories.forEach(cat => {
+                const catDishes = allDishes.filter(d => d.category === cat);
+                if(catDishes.length > 0) {
+                    // إضافة عنوان الصنف
+                    body.innerHTML += `<div class="category-header">${cat}</div>`;
+                    
+                    catDishes.forEach(d => {
+                        const itemJSON = JSON.stringify({id: d.id, ...d}).replace(/'/g, "&apos;");
+                        body.innerHTML += `
+                            <div style="display:flex; align-items:center; background:#fff; margin-bottom:8px; padding:8px; border-radius:12px; border:1px solid #f0f0f0;">
+                                <img src="${d.img || ''}" style="width:40px; height:40px; border-radius:8px; margin-left:12px; object-fit:cover; background:#eee;">
+                                <div style="flex:1">
+                                    <b style="font-size:13px;">${d.name}</b><br>
+                                    <small style="color:#27ae60">${d.price} دج</small>
+                                </div>
+                                <i class="fa fa-edit" style="color:var(--blue); padding:8px;" onclick='prepareEdit(${itemJSON})'></i>
+                                <i class="fa fa-trash" style="color:red; padding:8px;" onclick="deleteDish('${d.id}')"></i>
+                            </div>`;
+                    });
+                }
+            });
+            if(body.innerHTML === "") body.innerHTML = "<p style='text-align:center'>المنيو فارغ</p>";
+        });
+    }
+
+    async function saveProduct() {
+        const name = document.getElementById('pName').value;
+        const price = document.getElementById('pPrice').value;
+        if(!name || !price) return alert("أدخل البيانات!");
+        
+        const btn = document.getElementById('mainBtn');
+        const progCont = document.getElementById('progCont');
+        btn.disabled = true; btn.innerText = "جاري الحفظ...";
+
+        try {
+            const imgFile = document.getElementById('fileI').files[0];
+            const vidFile = document.getElementById('fileV').files[0];
+            let imgLink = null, vidLink = null;
+
+            if (imgFile || vidFile) {
+                progCont.style.display = 'block';
+                if (imgFile) imgLink = await uploadMediaWithProgress(imgFile);
+                if (vidFile) vidLink = await uploadMediaWithProgress(vidFile);
+            }
+
+            const data = { 
+                name, price: Number(price), 
+                category: document.getElementById('pCat').value, 
+                ingredients: document.getElementById('pIng').value,
+                updatedAt: Date.now() 
+            };
+            if(imgLink) data.img = imgLink;
+            if(vidLink) data.video = vidLink;
+
+            if(currentEditId) {
+                await db.collection("dishes").doc(currentEditId).update(data);
+            } else {
+                data.orderNum = Date.now();
+                await db.collection("dishes").add(data);
+            }
+            location.reload();
+        } catch(e) { alert("خطأ!"); btn.disabled = false; }
+    }
+
+    function prepareEdit(item) {
+        currentEditId = item.id;
+        document.getElementById('pName').value = item.name;
+        document.getElementById('pPrice').value = item.price;
+        document.getElementById('pCat').value = item.category;
+        document.getElementById('pIng').value = item.ingredients || "";
+        document.getElementById('modalTitle').innerText = "تعديل: " + item.name;
+        document.getElementById('mainBtn').innerText = "تحديث 🔄";
+        document.getElementById('mainBtn').style.background = "var(--blue)";
+        closeModal('manageModal'); openModal('addModal');
+    }
+
+    async function deleteDish(id) { if(confirm("حذف؟")) await db.collection("dishes").doc(id).delete(); }
+
+    async function loadSortableItems() {
+        const container = document.getElementById('sortableContainer');
+        container.innerHTML = "جاري التحميل...";
+        const snap = await db.collection("dishes").get();
+        let allDishes = [];
+        snap.forEach(doc => allDishes.push({id: doc.id, ...doc.data()}));
+        allDishes.sort((a, b) => (a.orderNum || 0) - (b.orderNum || 0));
+
+        container.innerHTML = "";
+        categories.forEach(cat => {
+            const catDishes = allDishes.filter(d => d.category === cat);
+            if(catDishes.length > 0) {
+                const group = document.createElement('div');
+                group.style.width = "100%";
+                group.innerHTML = `<div style="width:85%; margin:10px auto;" class="category-header">${cat}</div>`;
+                const list = document.createElement('div');
+                list.style.cssText = "width:100%; display:flex; flex-direction:column; align-items:center;";
+                catDishes.forEach(d => {
+                    list.innerHTML += `
+                        <div class="item-card" data-id="${d.id}">
+                            <img src="${d.img || ''}">
+                            <div class="info">${d.name}</div>
+                            <div class="handle"><i class="fas fa-bars"></i></div>
+                        </div>`;
+                });
+                container.appendChild(group); container.appendChild(list);
+                new Sortable(list, { handle: '.handle', animation: 150, onEnd: () => document.getElementById('floatingSaveOrder').style.display = 'block' });
+            }
+        });
+    }
+
+    async function saveNewOrder() {
+        const btn = document.getElementById('floatingSaveOrder');
+        btn.innerText = "جاري الحفظ...";
+        const batch = db.batch();
+        document.querySelectorAll('.item-card').forEach((card, index) => {
+            batch.update(db.collection("dishes").doc(card.dataset.id), { orderNum: index });
+        });
+        await batch.commit();
+        location.reload();
+    }
+
+    function openAddForm() { currentEditId = null; openModal('addModal'); }
+    function openModal(id) { document.getElementById(id).style.display = 'block'; }
+    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+</script>
+</body>
+</html>
