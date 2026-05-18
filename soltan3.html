@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Sweet & Salt | T2</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    
+    <style>
+        :root { --main: #d4a373; --accent: #27ae60; --bg-dark: #1a0f05; --red: #e74c3c; }
+        body { margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; direction: rtl; background: var(--bg-dark); color: #fff; min-height: 100vh; overflow-x: hidden; }
+        
+        .full-screen { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 10000; background: var(--bg-dark); text-align: center; padding: 20px; }
+        .loader-circle { width: 45px; height: 45px; border: 4px solid rgba(212, 163, 115, 0.1); border-top: 4px solid var(--main); border-radius: 50%; animation: spin 0.8s linear infinite; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+
+        .header { position: fixed; top: 0; width: 100%; background: #000; padding: 15px; border-bottom: 2px solid var(--main); z-index: 1000; text-align: center; height: 60px; box-sizing: border-box; }
+        .category-bar { position: fixed; top: 60px; width: 100%; display: flex; gap: 15px; padding: 15px; background: rgba(26, 15, 5, 0.95); overflow-x: auto; z-index: 900; backdrop-filter: blur(10px); border-bottom: 1px solid rgba(255,255,255,0.1); scrollbar-width: none; }
+        .cat-item { display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 80px; height: 80px; background: rgba(255, 255, 255, 0.05); border-radius: 50%; border: 2px solid rgba(212, 163, 115, 0.2); transition: 0.3s; flex-shrink: 0; cursor: pointer; }
+        .cat-item.active { background: var(--main); color: #1a0f05; transform: scale(1.1); border-color: #fff; }
+
+        .container { padding: 15px; margin-top: 175px; padding-bottom: 110px; }
+        .item-card { display: flex; align-items: center; margin-bottom: 25px; height: 110px; background: rgba(255,255,255,0.05); border-radius: 15px; cursor: pointer; }
+        .item-card:nth-child(even) { flex-direction: row-reverse; }
+        .img-wrapper { width: 95px; height: 95px; margin: 5px; z-index: 10; flex-shrink: 0; position: relative; }
+        .img-wrapper img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; border: 3px solid #fff; }
+        .info-panel { flex-grow: 1; background: #fff; height: 80px; margin-right: -45px; padding: 0 55px 0 15px; border-radius: 40px 15px 15px 40px; display: flex; flex-direction: column; justify-content: center; color: #000; }
+        .item-card:nth-child(even) .info-panel { margin-right: 0; margin-left: -45px; padding: 0 15px 0 55px; border-radius: 15px 40px 40px 15px; text-align: left; }
+
+        .float-btn { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); width: 90%; background: var(--accent); color: white; padding: 18px; border-radius: 50px; display: none; justify-content: space-between; z-index: 2000; font-weight: bold; border: none; align-items: center; }
+        .black-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(8px); z-index: 3000; display: none; }
+        .modal { position: fixed; background: #fff; color: #000; border-radius: 25px; z-index: 4000; display: none; flex-direction: column; overflow: hidden; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90%; max-height: 85vh; }
+
+        #imageModal { background: rgba(0,0,0,0.9); width: 100%; height: 100%; max-height: 100vh; border-radius: 0; justify-content: center; align-items: center; }
+        #fullImage { width: 95%; height: auto; max-height: 80vh; object-fit: contain; border-radius: 15px; border: 2px solid var(--main); }
+
+        .feedback-screen { position: fixed; inset: 0; background: var(--bg-dark); z-index: 11000; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 25px; text-align: center; }
+        .feedback-screen textarea { width: 100%; height: 120px; border-radius: 15px; padding: 15px; background: #2a1a0a; border: 1px solid var(--main); color: #fff; margin: 15px 0; font-size: 16px; box-sizing: border-box; }
+        .success-msg { color: var(--accent); font-weight: bold; margin-top: 10px; display: none; }
+    </style>
+</head>
+<body>
+
+<div id="loadingOverlay" class="full-screen"><div class="loader-circle"></div></div>
+<div id="globalOverlay" class="black-overlay" onclick="closeAllModals()"></div>
+
+<div id="imageModal" class="modal" onclick="closeAllModals()">
+    <img id="fullImage" alt="تكبير الصورة">
+    <p style="color: white; margin-top: 10px;">إضغط في أي مكان للإغلاق</p>
+</div>
+
+<div id="feedbackScreen" class="feedback-screen">
+    <h2 style="color:var(--main)">شكراً لزيارتكم! ✨</h2>
+    <p style="color: #ccc;">رأيك يهمنا، سيتم توجيهك إلى صفحة التقييم حالاً</p>
+    <textarea id="feedbackText" placeholder="اكتب ملاحظاتك هنا..."></textarea>
+    <div id="feedbackButtons" style="display: flex; gap: 10px; width: 100%;">
+        <button style="flex: 1; background: var(--main); border: none; padding: 15px; border-radius: 50px; font-weight: bold;" onclick="submitFeedbackAction(true)">إرسال وتقييم</button>
+        <button style="flex: 1; background: #333; color: white; border: none; padding: 15px; border-radius: 50px; font-weight: bold;" onclick="submitFeedbackAction(false)">إغلاق</button>
+    </div>
+    <p id="redirectMsg" class="success-msg">جاري التوجيه خلال 3 ثوانٍ...</p>
+</div>
+
+<div id="welcomeScreen" class="full-screen" style="display:none;">
+    <h1 style="color: var(--main); font-size: 40px;">Sweet & Salt</h1>
+    <p>مرحباً بكم في الطاولة رقم 2</p>
+    <button id="entryBtn" style="background:var(--main); border:none; padding:15px 60px; border-radius:50px; font-weight:bold; cursor:pointer;" onclick="requestSession()">🛒 استعراض المنيو</button>
+    <p id="lockMsg" style="color:var(--red); display:none; margin-top:20px;">⚠️ الطاولة مشغولة حالياً</p>
+</div>
+
+<div id="waitScreen" class="full-screen" style="display:none;">
+    <div class="loader-circle"></div>
+    <h2 style="color:var(--main); margin-top:20px;">بانتظار موافقة النادل...</h2>
+    <p>طاولة رقم 2</p>
+</div>
+
+<div id="mainContent" style="display:none;">
+    <div class="header"><h3>Sweet & Salt | T2</h3></div>
+    <div class="category-bar">
+        <div class="cat-item active" onclick="changeCat('Pizza', this)"><i class="fas fa-pizza-slice"></i><span>Pizza</span></div>
+        <div class="cat-item" onclick="changeCat('Snacks', this)"><i class="fas fa-hamburger"></i><span>Snacks</span></div>
+        <div class="cat-item" onclick="changeCat('Plats', this)"><i class="fas fa-utensils"></i><span>Plats</span></div>
+        <div class="cat-item" onclick="changeCat('Sweets', this)"><i class="fas fa-ice-cream"></i><span>Sweets</span></div>
+        <div class="cat-item" onclick="changeCat('Boisson', this)"><i class="fas fa-glass-whiskey"></i><span>Boisson</span></div>
+    </div>
+    <div class="container" id="grid"></div>
+    <button id="floatBtn" class="float-btn" onclick="openCart()">
+        <span>السلة (<span id="cartCount">0</span>)</span>
+        <span id="totalDisplay">0 دج</span>
+    </button>
+</div>
+
+<div id="detailModal" class="modal">
+    <video id="itemVideo" style="width:100%; height:200px; object-fit:cover;" controls autoplay muted loop playsinline></video>
+    <div style="padding:20px;">
+        <h2 id="itemName" style="margin:0;"></h2>
+        <p id="itemIngredients" style="color:#666; font-size:14px; margin:10px 0;"></p>
+        <button id="addBtnDetail" style="width:100%; background:var(--accent); color:white; border:none; padding:15px; border-radius:15px; font-weight:bold;">إضافة للسلة 🛒</button>
+        <button onclick="closeAllModals()" style="width:100%; background:#eee; border:none; padding:10px; border-radius:15px; margin-top:10px;">إغلاق</button>
+    </div>
+</div>
+
+<div id="cartModal" class="modal">
+    <div style="padding: 20px; background: var(--main); color: #000; text-align: center; font-weight: bold;">طلب طاولة رقم 2</div>
+    <div id="cartItemsList" style="max-height: 40vh; overflow-y: auto; padding: 10px;"></div>
+    <div style="padding: 20px; border-top: 1px solid #eee;">
+        <div style="display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 15px; color:#000;">
+            <span>المجموع:</span><span id="finalTotal">0 دج</span>
+        </div>
+        <button id="sendOrderBtn" onclick="sendOrder()" style="width: 100%; background: var(--accent); color: white; border: none; padding: 15px; border-radius: 15px; font-weight: bold; cursor:pointer;">إرسال للمطبخ ✅</button>
+        <button onclick="closeAllModals()" style="width: 100%; background: #eee; border: none; padding: 10px; border-radius: 15px; margin-top: 10px; cursor:pointer;">إغلاق</button>
+    </div>
+</div>
+
+<script>
+const firebaseConfig = { projectId: "soltan-95348" };
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+const TABLE_ID = "2"; 
+const MY_TOKEN = localStorage.getItem('device_token') || 'user-' + Math.random().toString(36).substr(2, 9);
+localStorage.setItem('device_token', MY_TOKEN);
+
+let cart = [];
+let isAuthorized = false;
+
+function initSystem() {
+    db.collection("tables_status").doc(TABLE_ID).onSnapshot(doc => {
+        const data = doc.data();
+        document.getElementById('loadingOverlay').style.display = 'none';
+
+        if(!data) {
+            document.getElementById('welcomeScreen').style.display = 'flex';
+            return;
+        }
+
+        if (isAuthorized && data.isBusy === false) {
+            handleExit(); return;
+        }
+
+        if(!isAuthorized && data.status === "active" && data.current_device === MY_TOKEN) {
+            isAuthorized = true;
+            document.getElementById('welcomeScreen').style.display = 'none';
+            document.getElementById('waitScreen').style.display = 'none';
+            document.getElementById('mainContent').style.display = 'block';
+            fetchDishes('Pizza');
+        } 
+        else if(!isAuthorized && data.status === "waiting" && data.current_device === MY_TOKEN) {
+            document.getElementById('welcomeScreen').style.display = 'none';
+            document.getElementById('waitScreen').style.display = 'flex';
+        } 
+        else {
+            document.getElementById('welcomeScreen').style.display = 'flex';
+            document.getElementById('lockMsg').style.display = (data.isBusy && data.current_device !== MY_TOKEN) ? 'block' : 'none';
+            document.getElementById('entryBtn').disabled = (data.isBusy && data.current_device !== MY_TOKEN);
+        }
+    });
+}
+
+async function requestSession() {
+    await db.collection("tables_status").doc(TABLE_ID).set({
+        isBusy: true, status: "waiting", current_device: MY_TOKEN, table_id: TABLE_ID
+    }, { merge: true });
+}
+
+async function fetchDishes(cat) {
+    const grid = document.getElementById('grid');
+    grid.innerHTML = "<p style='text-align:center;'>جاري تحميل قائمة الطعام...</p>";
+    
+    try {
+        const snap = await db.collection("dishes")
+            .where("category", "==", cat)
+            .orderBy("orderNum", "asc")
+            .get();
+            
+        grid.innerHTML = "";
+        if(snap.empty) {
+            grid.innerHTML = "<p style='text-align:center; color:#ccc;'>لا توجد أطباق في هذا القسم حالياً</p>";
+            return;
+        }
+
+        snap.forEach(doc => {
+            const d = doc.data();
+            const dishImg = d.img || 'https://via.placeholder.com/150';
+            grid.innerHTML += `
+                <div class="item-card">
+                    <div class="img-wrapper" onclick="zoomImage('${dishImg}')">
+                        <img src="${dishImg}" onerror="this.src='https://via.placeholder.com/150'">
+                    </div>
+                    <div class="info-panel" onclick="openDetails('${d.name}', ${d.price}, '${d.videoUrl || ''}', '${d.ingredients || ''}')">
+                        <h4>${d.name}</h4>
+                        <div style="color:var(--main); font-weight:bold;">${d.price} دج</div>
+                    </div>
+                </div>`;
+        });
+    } catch (e) {
+        grid.innerHTML = "<p style='text-align:center; color:var(--red);'>حدث خطأ أثناء تحميل البيانات</p>";
+    }
+}
+
+function zoomImage(src) {
+    document.getElementById('fullImage').src = src;
+    document.getElementById('imageModal').style.display = 'flex';
+    document.getElementById('globalOverlay').style.display = 'block';
+}
+
+function openDetails(name, price, videoUrl, ing) {
+    document.getElementById('itemName').innerText = name;
+    document.getElementById('itemIngredients').innerText = "🌿 " + (ing || "مكونات طازجة");
+    
+    const v = document.getElementById('itemVideo');
+    if (videoUrl && videoUrl.trim() !== "") {
+        v.style.display = "block";
+        v.src = videoUrl;
+        v.load();
+        v.play().catch(() => {});
+    } else {
+        v.style.display = "none";
+        v.src = "";
+    }
+    
+    document.getElementById('addBtnDetail').onclick = () => { addToCart(name, price); closeAllModals(); };
+    document.getElementById('globalOverlay').style.display = 'block';
+    document.getElementById('detailModal').style.display = 'flex';
+}
+
+function addToCart(name, price) {
+    const item = cart.find(i => i.name === name);
+    if(item) item.qty++; else cart.push({ name, price, qty: 1 });
+    updateCartUI();
+}
+
+function updateCartUI() {
+    const count = cart.reduce((a, b) => a + b.qty, 0);
+    const total = cart.reduce((a, b) => a + (b.price * b.qty), 0);
+    document.getElementById('cartCount').innerText = count;
+    document.getElementById('totalDisplay').innerText = total + " دج";
+    document.getElementById('finalTotal').innerText = total + " دج";
+    document.getElementById('floatBtn').style.display = count > 0 ? 'flex' : 'none';
+}
+
+function openCart() {
+    const list = document.getElementById('cartItemsList');
+    list.innerHTML = cart.map((item, index) => `
+        <div style="display:flex; justify-content:space-between; padding:10px; border-bottom:1px solid #eee; color:#000;">
+            <div><b>${item.name}</b><br>${item.price} دج</div>
+            <div>
+                <button onclick="changeQty(${index}, -1)" style="width:30px;">-</button>
+                <span style="margin:0 5px;">${item.qty}</span>
+                <button onclick="changeQty(${index}, 1)" style="width:30px;">+</button>
+            </div>
+        </div>
+    `).join('');
+    document.getElementById('globalOverlay').style.display = 'block';
+    document.getElementById('cartModal').style.display = 'flex';
+}
+
+function changeQty(index, delta) {
+    cart[index].qty += delta;
+    if(cart[index].qty <= 0) cart.splice(index, 1);
+    updateCartUI();
+    if(cart.length === 0) closeAllModals(); else openCart();
+}
+
+async function sendOrder() {
+    const btn = document.getElementById('sendOrderBtn');
+    btn.disabled = true; btn.innerText = "جاري الإرسال...";
+    try {
+        await db.collection("menu").add({
+            table: TABLE_ID,
+            table_no: TABLE_ID,
+            tableNumber: parseInt(TABLE_ID),
+            items: cart,
+            total: cart.reduce((a, b) => a + (b.price * b.qty), 0),
+            status: "pending",
+            time: Date.now()
+        });
+        alert("تم إرسال طلب الطاولة 2 للمطبخ! ✅");
+        cart = []; updateCartUI(); closeAllModals();
+    } catch (e) { alert("خطأ في الشبكة"); }
+    btn.disabled = false; btn.innerText = "إرسال للمطبخ ✅";
+}
+
+function handleExit() {
+    isAuthorized = false;
+    document.getElementById('mainContent').style.display = 'none';
+    document.getElementById('feedbackScreen').style.display = 'flex';
+}
+
+async function submitFeedbackAction(agree) {
+    const text = document.getElementById('feedbackText').value;
+    document.getElementById('feedbackButtons').style.display = 'none';
+    document.getElementById('redirectMsg').style.display = 'block';
+    if (agree && text.trim() !== "") {
+        await db.collection("feedbacks").add({ table: TABLE_ID, comment: text, time: Date.now() });
+    }
+    setTimeout(() => { window.location.href = "https://www.google.com"; }, 3000);
+}
+
+function closeAllModals() {
+    document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
+    document.getElementById('globalOverlay').style.display = 'none';
+    const v = document.getElementById('itemVideo');
+    if(v) v.pause();
+}
+
+function changeCat(cat, el) {
+    document.querySelectorAll('.cat-item').forEach(i => i.classList.remove('active'));
+    el.classList.add('active');
+    fetchDishes(cat);
+}
+
+initSystem();
+</script>
+</body>
+</html>
