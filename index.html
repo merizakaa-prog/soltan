@@ -1,1 +1,113 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>منيو سلطان ثلاثي الأبعاد 🍽️</title>
+    
+    <!-- استدعاء مكتبة جوجل لعرض المجسمات ثلاثية الأبعاد -->
+    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.3.0/model-viewer.min.js"></script>
 
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Tajawal', sans-serif;
+            background-color: #0F172A;
+            color: #FFFFFF;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h1 {
+            color: #38BDF8;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .menu-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: center;
+            max-width: 1000px;
+        }
+
+        .card {
+            background-color: #1E293B;
+            border: 1px solid #334155;
+            border-radius: 20px;
+            overflow: hidden;
+            width: 320px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+            text-align: center;
+            padding-bottom: 20px;
+        }
+
+        /* تصميم حاوية الـ 3D */
+        model-viewer {
+            width: 100%;
+            height: 250px;
+            background-color: #151f32;
+        }
+
+        .card-info {
+            padding: 15px;
+        }
+
+        .price {
+            color: #10B981;
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-top: 5px;
+        }
+
+        .ar-hint {
+            display: inline-block;
+            margin-top: 10px;
+            padding: 8px 16px;
+            background-color: #38BDF8;
+            color: #0F172A;
+            border-radius: 30px;
+            font-weight: bold;
+            font-size: 0.85rem;
+            text-decoration: none;
+            box-shadow: 0 4px 10px rgba(56, 189, 248, 0.3);
+        }
+    </style>
+</head>
+<body>
+
+    <h1>قائمة الطعام ثلاثية الأبعاد 3D & AR 🏷️</h1>
+
+    <div class="menu-grid">
+        <!-- كرت الطبق الأول -->
+        <div class="card">
+            <!-- هنا يتم عرض المجسم. استبدل رابط src برابط طبقك الخاص بصيغة glb -->
+            <model-viewer 
+                src="https://modelviewer.dev/shared-assets/models/Cake.glb" 
+                ios-src="https://modelviewer.dev/shared-assets/models/Cake.usdz"
+                alt="طبق حلوى ثلاثي الأبعاد" 
+                ar 
+                ar-modes="webxr scene-viewer quick-look" 
+                camera-controls 
+                poster="https://via.placeholder.com/320x250/151f32/FFFFFF?text=جاري+التحميل..."
+                shadow-intensity="1">
+            </model-viewer>
+            
+            <div class="card-info">
+                <h3>حلوى الكيك الملكية 🍰</h3>
+                <p style="color: #94A3B8; font-size: 0.9rem;">كيكة الشوكولاتة الفاخرة مغطاة بطبقة من الكريمة الغنية.</p>
+                <div class="price">1200 د.ج</div>
+                <span class="ar-hint">اضغط على زر AR في المجسم لعرضه على طاولتك 📱</span>
+            </div>
+        </div>
+        
+        <!-- يمكنك تكرار الـ card لأطباق أخرى هنا -->
+    </div>
+
+</body>
+</html>
