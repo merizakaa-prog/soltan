@@ -58,7 +58,6 @@
             font-weight: 500;
         }
 
-        /* حاوية عرض المجسم ثلاثي الأبعاد */
         .viewer-container {
             position: relative;
             width: 100%;
@@ -72,7 +71,7 @@
             --poster-color: transparent;
         }
 
-        /* تصميم زر الـ AR المخصص للأندرويد */
+        /* زر الواقع المعزز المطور */
         .ar-button {
             background-color: #d32f2f;
             color: white;
@@ -87,7 +86,7 @@
             transform: translateX(-50%);
             box-shadow: 0 4px 12px rgba(211, 47, 47, 0.4);
             cursor: pointer;
-            z-index: 999;
+            display: block !important; /* إجبار الزر على الظهور */
         }
 
         .item-details {
@@ -153,16 +152,14 @@
 
             <div class="viewer-container">
                 <model-viewer 
-                    src="chicken.glb" 
+                    src="./chicken.glb" 
                     alt="طبق دجاج محمر ثلاثي الأبعاد" 
                     ar 
                     ar-modes="scene-viewer webxr quick-look" 
                     camera-controls 
                     auto-rotate
                     shadow-intensity="1.5"
-                    shadow-softness="1"
-                    exposure="1.2"
-                    environment-image="neutral">
+                    exposure="1.2">
                     
                     <button slot="ar-button" class="ar-button">
                         ✨ اضغط هنا لعرض الطبق على الطاولة
