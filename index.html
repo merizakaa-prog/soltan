@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>قائمة الطعام التفاعلية بالواقع المعزز (AR)</title>
     
-    <!-- استدعاء المكتبة السحابية الرسمية لعرض المجسمات -->
     <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
 
     <style>
@@ -152,12 +151,12 @@
             </div>
 
             <div class="viewer-container">
-                <!-- 🚀 لاحظ هنا: وضعنا رابط الـ GLB فقط وحذفنا وسم ios-src نهائياً! -->
                 <model-viewer 
-                    src="https://res.cloudinary.com/dzrrirfig/raw/upload/v1717881120/chicken.glb"
+                    src="https://res.cloudinary.com/dzrrirfig/raw/upload/v1717881120/chicken.glb" 
+                    ios-src="https://raw.githubusercontent.com/KhaledAlhrbi/ar-assets/main/chicken.usdz" 
                     alt="طبق دجاج محمر ثلاثي الأبعاد" 
                     ar 
-                    ar-modes="webxr scene-viewer quick-look" 
+                    ar-modes="scene-viewer webxr quick-look" 
                     camera-controls 
                     auto-rotate
                     shadow-intensity="1.5"
