@@ -71,7 +71,7 @@
             --poster-color: transparent;
         }
 
-        /* تصميم زر الـ AR المشترك للأنظمة */
+        /* تصميم زر الـ AR المشترك لجميع الأنظمة */
         .ar-button {
             background-color: #d32f2f;
             color: white;
@@ -160,7 +160,8 @@
                     camera-controls 
                     auto-rotate
                     shadow-intensity="1.5"
-                    exposure="1.2">
+                    exposure="1.2"
+                    quick-look-browsers="safari chrome">
                     
                     <button slot="ar-button" class="ar-button">
                         ✨ اضغط هنا لعرض الطبق على الطاولة
@@ -185,5 +186,12 @@
 
     </div>
 
+    <script>
+        window.addEventListener('pageshow', function (event) {
+            if (event.persisted) {
+                window.location.reload();
+            }
+        });
+    </script>
 </body>
 </html>
